@@ -3,47 +3,110 @@
 #include <string>
 
 void printHelp();
-int dealWithInputs(std::vector<std::string> cmdLineArgs);
-
-std::string versionNumber{"0.2"};
-
-std::string inputFileName{" "};
-std::string outputFileName{" "};
-
-bool skipFlag{0}; //sometimes we have to skip an argument
-
-
-
+bool dealWithInputs(const std::vector<std::string>& cmdLineArgs, bool& helpRequested, bool& versionRequested, std::string& inputFileName, std::string& outputFileName);
 
 int main(int argc, char* argv[])
 {
   const std::vector<std::string> cmdLineArgs { argv, argv+argc };
 
-  if(dealWithInputs(cmdLineArgs)){return 1;}
+  const std::string versionNumber{"0.2"};
 
-  std::cout<< "type something, to exit type '-q'" <<std::endl;
-  std::string manualInput;
-  while(1)
+  bool helpRequested {false};
+  bool versionRequested {false};
+  std::string inputFileName{""};
+  std::string outputFileName{""};
+  if( ! dealWithInputs(cmdLineArgs, helpRequested, versionRequested, inputFileName, outputFileName) )
   {
-    std::getline(std::cin, manualInput);
-    if(manualInput == "-q"){break;}
-    std::cout << "you said: " << manualInput << std::endl;
-    for (auto & c: manualInput) c = toupper(c);
-    std::cout << "but you yelled: " << manualInput << std::endl;
+    return 1;
   }
-  
-  //printing the output file names
-  if(inputFileName != " "){std::cout << "The input file name is: " << inputFileName << std::endl;}
-  if(outputFileName != " "){std::cout << "The output file name is: " << outputFileName << std::endl;}
-  
+
+  // Handle help, if requested
+  if (helpRequested) {
+    printHelp();
+    // Help requires no further action, so return from main
+    // with 0 used to indicate success
+    return 0;
+  }
+
+  // Handle version, if requested
+  // Like help, requires no further action,
+  // so return from main with zero to indicate success
+  if (versionRequested) {
+    std::cout << versionNumber << std::endl;
+    return 0;
+  }
+
+  // Initialise variables for processing input text
+  char inputChar {'x'};
+  std::string inputText {""};
+
+  // Warn that input file option not yet implemented
+  if (!inputFileName.empty()) {
+    std::cout << "[warning] input from file ('"
+              << inputFileName
+              << "') not implemented yet, using stdin\n";
+  }
+
+  // Loop over input
+  std::cout<< "type something, then press Enter and Ctrl-D" <<std::endl;
+  while(std::cin >> inputChar)
+  {
+    // Uppercase alphabetic characters
+    if (std::isalpha(inputChar)) {
+      inputText += std::toupper(inputChar);
+      continue;
+    }
+
+    // Transliterate digits to English words
+    switch (inputChar) {
+      case '0':
+	inputText += "ZERO";
+	break;
+      case '1':
+	inputText += "ONE";
+	break;
+      case '2':
+	inputText += "TWO";
+	break;
+      case '3':
+	inputText += "THREE";
+	break;
+      case '4':
+	inputText += "FOUR";
+	break;
+      case '5':
+	inputText += "FIVE";
+	break;
+      case '6':
+	inputText += "SIX";
+	break;
+      case '7':
+	inputText += "SEVEN";
+	break;
+      case '8':
+	inputText += "EIGHT";
+	break;
+      case '9':
+	inputText += "NINE";
+	break;
+    }
+
+    // If the character isn't alphabetic or numeric, DONT add it.
+    // Our ciphers can only operate on alphabetic characters.
+  }
+
+  // Output the transliterated text
+  // Warn that output file option not yet implemented
+  if (!outputFileName.empty()) {
+    std::cout << "[warning] output to file ('"
+              << outputFileName
+              << "') not implemented yet, using stdout\n";
+  }
+
+  std::cout << inputText << std::endl;
+
   return 0;
 }
-
-
-
-
-
-
 
 void printHelp()
 {
@@ -56,46 +119,64 @@ void printHelp()
 
 
 
-int dealWithInputs(std::vector<std::string> cmdLineArgs)
+bool dealWithInputs(const std::vector<std::string>& cmdLineArgs, bool& helpRequested, bool& versionRequested, std::string& inputFileName, std::string& outputFileName)
 {
-  std::string arg;
-  std::string nextArg;
+  // Add a typedef that assigns another name for the given type for clarity
+  typedef std::vector<std::string>::size_type size_type;
+  const size_type nCmdLineArgs {cmdLineArgs.size()};
 
-  for(int i{1};i<cmdLineArgs.size();i++)//i starts at 1 to skip the program name
+  // Process command line arguments
+  // i starts at 1 to skip the program name
+  for(size_type i{1};i<nCmdLineArgs;i++)
+  {
+    const std::string& arg = cmdLineArgs[i];
+
+    if(arg == "-h" || arg == "--help")
     {
-      if(skipFlag){skipFlag = 0;continue;}//Skip this argument because it's a file name
-      
-      arg = cmdLineArgs[i];
-      if(i != cmdLineArgs.size()-1){nextArg = cmdLineArgs[i+1];}
-
-      if(arg == "-h" or arg == "--help"){printHelp();continue;}
-      
-      if(arg == "--version")
-      {
-	std::cout << "This is version:" << versionNumber << std::endl;
-	continue;
-      } // print version #
-
-      
-      if(arg == "-i")//input file
-	{
-	  inputFileName = nextArg;
-	  skipFlag = 1;//the next argument is just the name
-	  continue;
-	}
-
-      
-      if(arg == "-o")//output file
-	{
-
-	  outputFileName = nextArg;
-	  skipFlag = 1;//the next argument is just the name
-	  continue;
-	}
-
-      
-      std::cerr << "Input Error" << std::endl;return 1;//if nothing's been triggered, input error
-
+      helpRequested = true;
     }
-  return 0;
+
+    else if(arg == "--version")
+    {
+      versionRequested = true;
+    }
+
+    else if(arg == "-i")//input file
+    {
+      if(i != nCmdLineArgs-1)
+      {
+	inputFileName = cmdLineArgs[i+1];
+	++i;//the next argument is just the name
+      }
+      else
+      {
+	std::cerr << "[error] -i requires a filename argument" << std::endl;
+	return false;
+      }
+    }
+
+    else if(arg == "-o")//output file
+    {
+      if(i != nCmdLineArgs-1)
+      {
+	outputFileName = cmdLineArgs[i+1];
+	++i;//the next argument is just the name
+      }
+      else
+      {
+	std::cerr << "[error] -o requires a filename argument" << std::endl;
+	return false;
+      }
+    }
+
+    else
+    {
+      //if nothing's been triggered, input error
+      std::cerr << "[error] unknown argument '" << arg << "'\n";
+      return false;
+    }
+
+  }
+
+  return true;
 }
